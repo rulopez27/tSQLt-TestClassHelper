@@ -12,7 +12,7 @@ Remember this is a project still on development, so it could have some bugs. Fee
 ### 2.1	To get a test class script from a stored procedure or function
 Go to line 152 and chage @ObjectToWriteTests variable value to the name of the stored procedure or function you want to test. I.E.:
 
-			@ObjectToWriteTest = 'uspMyStoredProcedure'
+		@ObjectToWriteTest = 'uspMyStoredProcedure'
 
 I recommend to exclude "dbo" if that's your stored procedure/function schema, otherwise include schema name.
 
@@ -28,10 +28,10 @@ To do this there is a table valued variable called @filteredQueries that you can
 
 Here's an example of how to populate to use this feature:
 
-			--[TODO: Uncomment this if you are willing to use filtered queries]
-			INSERT INTO @filteredQueries(SchemaName, TableName, Filtered, FilterWithValues, SpecificColumnList) VALUES
-			('Production', 'Product', 1, 'ProductID = 3', 'ProductID, Name, ProductNumber, MakeFlag, ModifiedDate'),
-			('Production', 'BillOfMaterials', 1, 'ProductAssemblyID = 3', NULL)
+		--[TODO: Uncomment this if you are willing to use filtered queries]
+		INSERT INTO @filteredQueries(SchemaName, TableName, Filtered, FilterWithValues, SpecificColumnList) VALUES
+		('Production', 'Product', 1, 'ProductID = 3', 'ProductID, Name, ProductNumber, MakeFlag, ModifiedDate'),
+		('Production', 'BillOfMaterials', 1, 'ProductAssemblyID = 3', NULL)
 
 ## 3.	Execution
 
