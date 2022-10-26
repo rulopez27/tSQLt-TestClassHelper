@@ -12,7 +12,7 @@ Remember this is a project still on development, so it could have some bugs. Fee
 ### 2.1	To get a test class script from a stored procedure or function
 Go to line 152 and chage @ObjectToWriteTests variable value to the name of the stored procedure or function you want to test. I.E.:
 
-		@ObjectToWriteTest = 'uspMyStoredProcedure'
+	@ObjectToWriteTest = 'uspMyStoredProcedure'
 
 I recommend to exclude "dbo" if that's your stored procedure/function schema, otherwise include schema name.
 
@@ -28,10 +28,10 @@ To do this there is a table valued variable called @filteredQueries that you can
 
 Here's an example of how to populate to use this feature:
 
-		--[TODO: Uncomment this if you are willing to use filtered queries]
-		INSERT INTO @filteredQueries(SchemaName, TableName, Filtered, FilterWithValues, SpecificColumnList) VALUES
-		('Production', 'Product', 1, 'ProductID = 3', 'ProductID, Name, ProductNumber, MakeFlag, ModifiedDate'),
-		('Production', 'BillOfMaterials', 1, 'ProductAssemblyID = 3', NULL)
+	--[TODO: Uncomment this if you are willing to use filtered queries]
+	INSERT INTO @filteredQueries(SchemaName, TableName, Filtered, FilterWithValues, SpecificColumnList) VALUES
+	('Production', 'Product', 1, 'ProductID = 3', 'ProductID, Name, ProductNumber, MakeFlag, ModifiedDate'),
+	('Production', 'BillOfMaterials', 1, 'ProductAssemblyID = 3', NULL)
 
 ## 3.	Execution
 
@@ -48,73 +48,64 @@ You can either press F5 or Execute to run this script. The script will return yo
 Switch to Messages tab, you will find your test class script. Copy and paste it in another query window. Test class script contains the following sections (Using AdventureWorks2019 database from Microsoft with few customizations):
 *	Test Class creation
 			
-			USE [AdventureWorks2019]
-			GO
+		USE [AdventureWorks2019]
+		GO
 
-			EXEC [AdventureWorks2019].[tSQLt].NewTestClass 'uspGetBillOfMaterialsTests'
-			GO
+		EXEC [AdventureWorks2019].[tSQLt].NewTestClass 'uspGetBillOfMaterialsTests'
+		GO
 
 *	Fake Functions (if there is any function dependency). You will need to write the right variables and the fake logic here.
 
-			---------------------------------------------------------------
-			-------------------FAKE FUNCTIONS SECTION----------------------
-			---------------------------------------------------------------
-			--[TODO: Fake your functions here]
+		---------------------------------------------------------------
+		-------------------FAKE FUNCTIONS SECTION----------------------
+		---------------------------------------------------------------
+		--[TODO: Fake your functions here]
 
-			/*dbo.usfnGetProductSubAssemblyCount*/
-			--CREATE FUNCTION uspGetBillOfMaterialsTests.usfnGetProductSubAssemblyCount_Test (@variable1 <dataType1>, @variable2 <dataType2>)
-			--RETURNS <returnDataType>
-			--AS
-			--BEGIN
-				--[TODO: Write your fake function's code here]
-			--END
-			--GO
+		/*dbo.usfnGetProductSubAssemblyCount*/
+		--CREATE FUNCTION uspGetBillOfMaterialsTests.usfnGetProductSubAssemblyCount_Test (@variable1 <dataType1>, @variable2 <dataType2>)
+		--RETURNS <returnDataType>
+		--AS
+		--BEGIN
+			--[TODO: Write your fake function's code here]
+		--END
+		--GO
 
 *	Arrange and Set Up
 
-			---------------------------------------------------------------
-			-----------------------ARRANGE SECTION-------------------------
-			---------------------------------------------------------------
-			CREATE PROCEDURE uspGetBillOfMaterialsTests.SetUp
-			AS
-			BEGIN
-
-				/*	[TODO: Customize your fake tables process by doing the following]
-								1. Changing the value of the variables sent to each tSQLt.FakeTable stored procedure in order to meet your needs. 
-								2. If you need to deal with schema binding in an specific table, uncomment the code line that calls tSQLt.PrepareTableForFaking.
-								3. If you do not need any data to be populated in a fake table, just remove the INSERT INTO statement from the table you need
-					*/
-				
-				/*Arrange Views*/
-				DECLARE @sqlCommand NVARCHAR(MAX) = ''
-
-
-				EXEC tSQLt.SetFakeViewOn 'Production.vProductAndDescription'
-				
-				/*Arrange Functions*/
-				EXEC tSQLt.FakeFunction 'dbo.usfnGetProductSubAssemblyCount', 'uspGetBillOfMaterialsTests.usfnGetProductSubAssemblyCount_Test'
-
-
-
-				/*Production.BillOfMaterials*/
-				--EXEC tSQLt.PrepareTableForFaking  @TableSchemaAndName = 'Production.BillOfMaterials';
-				EXEC tSQLt.FakeTable @TableName ='BillOfMaterials', @SchemaName = 'Production', @Identity = 0, @ComputedColumns = 0, @Defaults = 0; 
-				INSERT INTO Production.BillOfMaterials(BillOfMaterialsID, ProductAssemblyID, ComponentID, StartDate, EndDate, UnitMeasureCode, BOMLevel, PerAssemblyQty, ModifiedDate) VALUES 
-				(2000, 3, 2, 'Jul  8 2010 12:00AM', NULL, 'EA ', 3, 10.00, 'Jun 24 2010 12:00AM'), 
-				(1657, 3, 461, 'Jun 19 2010 12:00AM', NULL, 'EA ', 3, 1.00, 'Jun  5 2010 12:00AM'), 
-				(389, 3, 504, 'Mar 18 2010 12:00AM', NULL, 'EA ', 3, 2.00, 'Mar  4 2010 12:00AM'), 
-				(805, 3, 505, 'May 26 2010 12:00AM', NULL, 'EA ', 3, 2.00, 'May 12 2010 12:00AM') 
+		---------------------------------------------------------------
+		-----------------------ARRANGE SECTION-------------------------
+		---------------------------------------------------------------
+		CREATE PROCEDURE uspGetBillOfMaterialsTests.SetUp
+		AS
+		BEGIN
+			/*	[TODO: Customize your fake tables process by doing the following]
+					1. Changing the value of the variables sent to each tSQLt.FakeTable stored procedure in order to meet your needs. 
+					2. If you do not need any data to be populated in a fake table, just remove the INSERT INTO statement from the table you need
+			*/
+			
+			/*Arrange Views*/
+			DECLARE @sqlCommand NVARCHAR(MAX) = ''
+			EXEC tSQLt.SetFakeViewOn 'Production.vProductAndDescription'
+			
+			/*Arrange Functions*/
+			EXEC tSQLt.FakeFunction 'dbo.usfnGetProductSubAssemblyCount', 'uspGetBillOfMaterialsTests.usfnGetProductSubAssemblyCount_Test'
+			
+			
+			/*Production.BillOfMaterials*/
+			EXEC tSQLt.FakeTable @TableName ='BillOfMaterials', @SchemaName = 'Production', @Identity = 0, @ComputedColumns = 0, @Defaults = 0; 
+			INSERT INTO Production.BillOfMaterials(BillOfMaterialsID, ProductAssemblyID, ComponentID, StartDate, EndDate, UnitMeasureCode, BOMLevel, PerAssemblyQty,ModifiedDate) VALUES 
+			(2000, 3, 2, 'Jul  8 2010 12:00AM', NULL, 'EA ', 3, 10.00, 'Jun 24 2010 12:00AM'), 
+			(1657, 3, 461, 'Jun 19 2010 12:00AM', NULL, 'EA ', 3, 1.00, 'Jun  5 2010 12:00AM'), 
+			(389, 3, 504, 'Mar 18 2010 12:00AM', NULL, 'EA ', 3, 2.00, 'Mar  4 2010 12:00AM'), 
+			(805, 3, 505, 'May 26 2010 12:00AM', NULL, 'EA ', 3, 2.00, 'May 12 2010 12:00AM')
 
 
-				/*Production.Product*/
-				--EXEC tSQLt.PrepareTableForFaking  @TableSchemaAndName = 'Production.Product';
-				EXEC tSQLt.FakeTable @TableName ='Product', @SchemaName = 'Production', @Identity = 0, @ComputedColumns = 0, @Defaults = 0; 
-				INSERT INTO Production.Product(ProductID, Name, ProductNumber, MakeFlag,  ModifiedDate) VALUES 
-				(3, 'BB Ball Bearing', 'BE-2349', 1, 'Feb  8 2014 10:01AM') 
-
-
-			END
-			GO
+			/*Production.Product*/
+			EXEC tSQLt.FakeTable @TableName ='Product', @SchemaName = 'Production', @Identity = 0, @ComputedColumns = 0, @Defaults = 0; 
+			INSERT INTO Production.Product(ProductID, Name, ProductNumber, MakeFlag,  ModifiedDate) VALUES 
+			(3, 'BB Ball Bearing', 'BE-2349', 1, 'Feb  8 2014 10:01AM') 
+		END
+		GO
 
 *	Test Case templates
 
@@ -132,14 +123,14 @@ Switch to Messages tab, you will find your test class script. Copy and paste it 
 
 *	Views Fake Off (if any)
 
-			/*NOTE: This section must be placed just after all the test cases, NOT in the Arrange section*/
+		/*NOTE: This section must be placed just after all the test cases, NOT in the Arrange section*/
 
-			EXEC tSQLt.SetFakeViewOff'Production.vProductAndDescription'
-			GO
+		EXEC tSQLt.SetFakeViewOff'Production.vProductAndDescription'
+		GO
 
 *	Execution date and time
 
-			/* Script generated by TestClassHelper on Oct 25 2022  9:20PM*/
+		/* Script generated by TestClassHelper on Oct 25 2022  9:20PM*/
 
 ## Observations and Suggestions
 Some things that I have found using it against my own projects is
@@ -152,5 +143,5 @@ Some things that I have found using it against my own projects is
 *	Populating UNIQUEIDENTIFIER columns is not possible yet. It crashes most of the time because all filtered data is converted to a NVARCHAR string. Try to avoid those fields.
 *	You still need to populate faked views. Use @CMD variable to write an "INSERT INTO" statemement to insert fake data to the fake view. Then use and reset it when needed
 
-			EXEC @CMD
+		EXEC @CMD
 

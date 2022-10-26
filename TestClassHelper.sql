@@ -385,8 +385,7 @@ BEGIN
 
 	print ('	/*	[TODO: Customize your fake tables process by doing the following]
 					1. Changing the value of the variables sent to each tSQLt.FakeTable stored procedure in order to meet your needs. 
-					2. If you need to deal with schema binding in an specific table, uncomment the code line that calls tSQLt.PrepareTableForFaking.
-					3. If you do not need any data to be populated in a fake table, just remove the INSERT INTO statement from the table you need
+					2. If you do not need any data to be populated in a fake table, just remove the INSERT INTO statement from the table you need
 		*/' +CHAR(10))
 
 	IF EXISTS(SELECT * FROM @AssociatedViews)
@@ -500,7 +499,6 @@ BEGIN
 							END
 
 						set @scriptToBePrintedOut = @scriptToBePrintedOut + '	/*'+@fullTableName+'*/' + CHAR(10)
-						set @scriptToBePrintedOut = @scriptToBePrintedOut + '	--EXEC tSQLt.PrepareTableForFaking  @TableSchemaAndName = '''+@fullTableName+''';' + CHAR(10)
 						set @scriptToBePrintedOut = @scriptToBePrintedOut + '	EXEC tSQLt.FakeTable @TableName =''' + @tableName + ''', @SchemaName = '''+ @schemaName +''', @Identity = 0, @ComputedColumns = 0, @Defaults = 0; '+ char(10)
 						set @scriptToBePrintedOut = @scriptToBePrintedOut + '	INSERT INTO '+ @fullTableName +'' +@coulumnList + 
 																			' VALUES ' + char(10) + @filteredQueryResult
