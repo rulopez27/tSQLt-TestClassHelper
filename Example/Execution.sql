@@ -13,5 +13,5 @@ DECLARE @filteredQueries TestClassFilteredQueries
 
 
 EXEC TestClassHelper.spGetTestClass 
-		@ObjectToWriteTest = ObjectToWriteTest,
+		@ObjectToWriteTest = @ObjectToWriteTest,
 		@filteredQueries = @filteredQueries
