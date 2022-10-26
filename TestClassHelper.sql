@@ -1,39 +1,23 @@
--- =========================================================================
+--=================================READ ME============================================
+-- ===================================================================================
 -- Author:		Ruben Lopez
 -- Create date: 2021-04-30
--- Description:	Script to install TestClassHelper Framework at your database
--- =========================================================================
+-- Modified date: 2022-10-15
+-- Description:	Base script to create temporary functions and get a test class 
+--				using tSQLt framework. 
+--				This is a tool to easily build a new tSQLt Test Class that will include 
+--				the arrange section user defined functions, user defined stored procedures 
+--				and tables which the object to be tested depends. It also will let you fake 
+--				those tables with actuall data taken from you development database to 
+--				populate fake tables.
+-- ===================================================================================
 
---[TODO: Change [YOUR DATABASE NAME] with the name of your database. I.E. USE AdventureWorks2017
+--[TODO: Manually set database name if is not set by replacing <DATABASE_NAME>]
+--USE <DATABASE_NAME>
+--GO
 
---USE [YOUR DATABASE NAME];
-GO
-
-IF NOT EXISTS(SELECT * FROM sys.schemas WHERE NAME = 'TestClassHelper')
-	BEGIN
-	 	EXEC ('CREATE SCHEMA TestClassHelper');
-	END
-ELSE
-	BEGIN
-		DROP FUNCTION TestClassHelper.fnGetColumnsCorrectFormatForQuery
-		DROP FUNCTION TestClassHelper.fnGetTableFromCSVString
-		EXEC ('DROP SCHEMA TestClassHelper');
-	END
-GO
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-
-CREATE TYPE TestClassFilteredQueries AS TABLE
-(
-	TableName VARCHAR(100) not null,
-	Filtered BIT not null,
-	FilterWithValues NVARCHAR(max),
-	SpecificColumnList VARCHAR(max)
-)
+IF object_id(N'dbo.fnGetTableFromCSVString', N'TF') IS NOT NULL
+    DROP FUNCTION dbo.fnGetTableFromCSVString
 GO
 
 -- ====================================================
@@ -41,7 +25,7 @@ GO
 -- Create date: 2021-04-30
 -- Description:	Returns a table from a given CSV string
 -- ====================================================
-CREATE FUNCTION TestClassHelper.fnGetTableFromCSVString
+CREATE FUNCTION dbo.fnGetTableFromCSVString
 (
 		@csvStringToSplit nvarchar(max)
 )
@@ -67,17 +51,17 @@ BEGIN
 END
 GO
 
-SET ANSI_NULLS ON
+IF object_id(N'dbo.fnGetColumnsCorrectFormatForQuery', N'FN') IS NOT NULL
+    DROP FUNCTION dbo.fnGetColumnsCorrectFormatForQuery
 GO
-SET QUOTED_IDENTIFIER ON
-GO
+
 -- ===================================================================================
 -- Author:		Ruben Lopez
 -- Create date: 2021-04-30
 -- Description:	Returns column's name in the format used at TestClassHelper script to
 --				building the query that retrieves data to populate fake tables
 -- ===================================================================================
-CREATE FUNCTION TestClassHelper.fnGetColumnsCorrectFormatForQuery
+CREATE FUNCTION dbo.fnGetColumnsCorrectFormatForQuery
 (
 		@columnName varchar(100), 
 		@tableName varchar(100)
@@ -147,22 +131,31 @@ BEGIN
 END
 GO
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+
 -- ===================================================================================
 -- Author:		Ruben Lopez
 -- Create date: 2021-04-30
 -- Description:	Returns column's name in the format used at TestClassHelper script to
 --				building the query that retrieves data to populate fake tables
 -- ===================================================================================
-CREATE PROCEDURE TestClassHelper.spGetTestClass
+
+--[TODO: Set @OcjectToWriteTest as the stored procedure/function name you like to get the test class
+DECLARE @ObjectToWriteTest VARCHAR(250) = ''
+
+DECLARE @filteredQueries TABLE
 (
-	 @ObjectToWriteTest VARCHAR(250),
-	 @filteredQueries TestClassFilteredQueries READONLY
+	SchemaName VARCHAR(100) default 'dbo',
+	TableName VARCHAR(100) not null,
+	Filtered BIT not null,
+	FilterWithValues NVARCHAR(max),
+	SpecificColumnList VARCHAR(max),
+	FullTableName AS CONCAT(SchemaName, '.', TableName)
 )
-AS
+
+--[TODO: Uncomment this if you are willing to use filtered queries]
+--INSERT INTO @filteredQueries(SchemaName, TableName, Filtered, FilterWithValues, SpecificColumnList) VALUES
+--('<SchemaName>, <TableName>, <Filtered>, <FilterWithValues>, <SpecificColumnList>),
+
 BEGIN
 	SET NOCOUNT ON;
 
@@ -235,7 +228,9 @@ BEGIN
 	--Temporary table for get all tables
 	DECLARE @AssociatedTables TABLE
 	(
-		Full_Table_Name VARCHAR(250)
+		Full_Table_Name VARCHAR(250),
+		SchemaName VARCHAR(250),
+		TableName VARCHAR(250)
 	)
 
 	--Temporary table for table's information
@@ -306,6 +301,12 @@ BEGIN
 	INSERT INTO @AssociatedTables(Full_Table_Name)
 	SELECT AssociatedObjectName FROM @AssociatedObjects WHERE AssociatedObjectType like '%USER_TABLE%'
 	GROUP BY AssociatedObjectName
+
+	UPDATE T SET T.SchemaName = IST.TABLE_SCHEMA,
+			T.TableName = IST.TABLE_NAME
+	FROM @AssociatedTables T 
+		INNER JOIN INFORMATION_SCHEMA.TABLES IST ON IST.TABLE_CATALOG = DB_NAME()
+	WHERE CONCAT(TABLE_SCHEMA, '.', TABLE_NAME) = T.Full_Table_Name
 
 	--Populate @AssociatedFunctions
 	INSERT INTO @AssociatedFunctions(Full_Function_Name)
@@ -424,9 +425,9 @@ BEGIN
 		END
 
 	/*2.4 Build SetUp procedure*/
-	declare CURSOR_ASSOCIATED_TABLES cursor for select Full_Table_Name from @AssociatedTables
+	declare CURSOR_ASSOCIATED_TABLES cursor for select Full_Table_Name, SchemaName, TableName from @AssociatedTables
 		open CURSOR_ASSOCIATED_TABLES
-			fetch next from CURSOR_ASSOCIATED_TABLES into  @fullTableName
+			fetch next from CURSOR_ASSOCIATED_TABLES into  @fullTableName, @schemaName, @tableName
 				while @@FETCH_STATUS = 0
 					begin
 						--Empty variables
@@ -457,7 +458,7 @@ BEGIN
 							BEGIN
 								SELECT @specificColumnList = SpecificColumnList from @filteredQueries  where TableName = @tableName
 								INSERT INTO @Columns(ColumnName)
-								SELECT Item from TestClassHelper.fnGetTableFromCSVString(@specificColumnList)
+								SELECT Item from dbo.fnGetTableFromCSVString(@specificColumnList)
 							END
 						ELSE IF EXISTS(SELECT * from @ColumnsUsed where ObjectName = @tableName)
 							INSERT INTO @Columns(ColumnName)
@@ -473,18 +474,19 @@ BEGIN
 						set @coulumnList = '('
 						select @coulumnList= @coulumnList + ColumnName + (CASE WHEN ColumnID = @lastColumnID THEN ')' ELSE ', ' END) from @Columns
 
-						IF exists(select * from @filteredQueries where TableName = @tableName)
+						IF exists(select * from @filteredQueries where FullTableName = CONCAT(@schemaName,'.', @tableName))
 							BEGIN
 								select @filtered = Filtered, @filters = FilterWithValues from @filteredQueries where TableName = @tableName
 
 								select @queryColumns =  @queryColumns + 
-														TestClassHelper.fnGetColumnsCorrectFormatForQuery(ColumnName, @tableName) +
+														dbo.fnGetColumnsCorrectFormatForQuery(ColumnName, @tableName) +
 														(CASE WHEN ColumnID = @lastColumnID THEN ' ' ELSE ' + '', '' + ' END) + CHAR(10) from @Columns
 
-								set @queryToExecuteOnTable = 'select ' + @queryColumns + 'from ' + @tableName
+								set @queryToExecuteOnTable = 'select ' + @queryColumns + 'from ' + CONCAT(@schemaName, '.', @tableName)
 
 								IF @filtered = 1
 									set @queryToExecuteOnTable =  @queryToExecuteOnTable + ' where ' + @filters
+
 
 								INSERT INTO @filteredQueriesResults(FilteredQueryResult)
 								exec tsqlt.ResultSetFilter 1, @queryToExecuteOnTable
@@ -509,7 +511,7 @@ BEGIN
 						select @scriptToBePrintedOut = replace(@scriptToBePrintedOut,'"','''')
 						print @scriptToBePrintedOut
 					
-						fetch next from CURSOR_ASSOCIATED_TABLES into @fullTableName
+						fetch next from CURSOR_ASSOCIATED_TABLES into  @fullTableName, @schemaName, @tableName
 					end
 				close CURSOR_ASSOCIATED_TABLES
 			deallocate CURSOR_ASSOCIATED_TABLES
