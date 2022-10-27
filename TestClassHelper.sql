@@ -153,8 +153,8 @@ DECLARE @filteredQueries TABLE
 )
 
 --[TODO: Uncomment this if you are willing to use filtered queries]
---INSERT INTO @filteredQueries(SchemaName, TableName, Filtered, FilterWithValues, SpecificColumnList) VALUES
---('<SchemaName>, <TableName>, <Filtered>, <FilterWithValues>, <SpecificColumnList>),
+INSERT INTO @filteredQueries(SchemaName, TableName, Filtered, FilterWithValues, SpecificColumnList) VALUES
+('<SchemaName>, <TableName>, <Filtered>, <FilterWithValues>, <SpecificColumnList>'),
 
 BEGIN
 	SET NOCOUNT ON;
